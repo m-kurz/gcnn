@@ -50,14 +50,26 @@ class GraphConv(tf.keras.layers.Layer):
         use_bias (bool): Indicates whether a (trainable) bias should be added
             to the output.
     '''
-    def __init__(self, num_outputs, A, sparse_op=True, kernel_initializer='he_uniform', use_bias=False):
+    def __init__(
+            self,
+            num_outputs: int,
+            A: np.ndarray,
+            kernel_initializer='he_uniform': str,
+            sparse_op=True: bool,
+            use_bias=False: bool
+        ):
         super().__init__()
         self.num_outputs = num_outputs
         self.sparse_op = sparse_op
         self.kernel_initializer = kernel_initializer
         self.use_bias = use_bias
+
         # A_hat: Precompute geometry information
         self._A_hat = self._compute_A_hat(A, self.sparse_op)
+
+        # Set trainable variables to None until built
+        self._kernel = None
+        self._b = None
 
     @property
     def sparse_op(self) -> bool:
@@ -91,13 +103,17 @@ class GraphConv(tf.keras.layers.Layer):
         '''Build layer by adding trainable weight matrix in correct size.'''
         # W: Add trainable weight_matrix
         self._kernel = self.add_weight(
-                                      "kernel",
-                                      shape=[int(input_shape[-1]), self.num_outputs],
-                                      initializer=self.kernel_initializer,
-                                      trainable=True
-                                      )
+            "kernel",
+            shape=[int(input_shape[-1]), self.num_outputs],
+            initializer=self.kernel_initializer,
+            trainable=True
+        )
         if self.use_bias:
-            self._b = self.add_weight(shape=(self.num_outputs,), initializer="zeros", trainable=True)
+            self._b = self.add_weight(
+                shape=(self.num_outputs,),
+                initializer="zeros",
+                trainable=True
+            )
 
     def call(self, x):
         '''Evaluates layer for input `x` following Eq.(8).'''
@@ -115,7 +131,10 @@ class GraphConv(tf.keras.layers.Layer):
         return self._A_hat @ x @ self._kernel
 
     @staticmethod
-    def _compute_A_hat(A, sparse):
+    def _compute_A_hat(
+            A: np.ndarray,
+            sparse: bool
+        ) -> tf.Tensor:
         '''Computes A_hat matrix from Eq.(9) relying only on graph topology.
 
         Precomputes the necessary matrices for computing the state update that
