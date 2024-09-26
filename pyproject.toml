@@ -1,0 +1,30 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "gcnn"
+version = "0.1.0"
+authors = [
+	"Marius Kurz <marius.kurz@cwi.nl>",
+]
+description = "An implementation of Graph Convolutional Neural Networks (GCNN) using TensorFlow."
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/m-kurz/gcnn/"
+keywords = ["Graph Convolutional Neural Networks", "TensorFlow", "Graph Neural Networks"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[tool.poetry.dependencies]
+tensorflow = ">=2.15"
+numpy = "*"
+pytest = "*"
+matplotlib = "*"
+
+#[tool.poetry.scripts]
+#gcnn = "gcnn.scripts.cli:main"

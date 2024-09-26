@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# SPDX-License-Identifier: MIT
+#
+# Copyright (c) 2024, Marius Kurz
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+import time
+import numpy as np
+import tensorflow as tf
+
+def _build_grid_adjacency_matrix(p):
+    '''Builds adjacency matrix for 3D grid with pxpxp nodes.'''
+    n_tot = np.power(p,3)
+    A = np.zeros((n_tot, n_tot), dtype=np.float32)
+
+    for k in range(p):
+        for j in range(p):
+            for i in range(p):
+                global_idx = i+j*(p)+k*np.power(p,2)
+                if i<(p-1):  # i+1
+                    local_idx = (i+1)+j*(p)+k*np.power(p,2)
+                    A[local_idx,global_idx] = 1.
+                    A[global_idx,local_idx] = 1.
+                if j<(p-1):  # j+1
+                    local_idx = i+(j+1)*(p)+k*np.power(p,2)
+                    A[local_idx,global_idx] = 1.
+                    A[global_idx,local_idx] = 1.
+                if k<(p-1):  # k+1
+                    local_idx = i+j*(p)+(k+1)*np.power(p,2)
+                    A[local_idx,global_idx] = 1.
+                    A[global_idx,local_idx] = 1.
+    return A
+
+def build_model(p, sparse, n_message_passing=3, latent_dim=128, initializer='he_uniform'):
+    input_shape=(np.power(p,3), 3)
+
+    # 1. Build graph adjacency matrix
+    A = _build_grid_adjacency_matrix(p)
+
+    # Simple GCN with Encoder and Decoder
+    inputs = tf.keras.Input(shape=input_shape)
+    # Encoder
+    x = tf.keras.layers.Dense(        16, activation='relu', kernel_initializer='he_uniform')(inputs)
+    x = tf.keras.layers.Dense(latent_dim, activation='relu', kernel_initializer='he_uniform')(x)
+    # n rounds of GCN-style message passing
+    for _ in range(n_message_passing):
+        x = GraphConv(latent_dim, A, kernel_initializer=initializer, sparse_op=sparse)(x)
+        x = tf.keras.layers.Activation('relu')(x)
+    # Readout layer
+    outputs = GraphReadout(reduction_op='mean', reduction_dim=-2)(x)
+
+    return tf.keras.Model(inputs=inputs, outputs=outputs, name='GCN')
+
+def compute_A_sparsity(p):
+    A = _build_grid_adjacency_matrix(p)
+    A_density = ( np.count_nonzero(A) / float(A.size) )
+    print(f'A     for p={p:1d}:  Density: {A_density:.4f}  Sparsity: {1.-A_density:.4f}')
+    A_hat = GraphConv._compute_A_hat(A, sparse=False)
+    A_hat = A_hat.numpy()
+    A_hat_density = ( np.count_nonzero(A_hat) / float(A_hat.size) )
+    print(f'A_hat for p={p:1d}:  Density: {A_hat_density:.4f}  Sparsity: {1.-A_hat_density:.4f}')
+
+def compare_dense_sparse_performance(p, batch_size=128, latent_dim=128, input_var=3):
+    data = np.random.rand(batch_size, np.power(p,3), input_var)
+
+    NUM_TRIES = 100
+
+    model_dense = build_model(p, sparse=False)
+    mytime = time.time()
+    for _ in range(NUM_TRIES):
+        res_dense = model_dense(data)
+    print(f'DENSE  Time: {(time.time()-mytime)/NUM_TRIES:.4e} s')
+
+    model_sparse = build_model(p, sparse=True)
+    mytime = time.time()
+    for _ in range(NUM_TRIES):
+        res_sparse = model_sparse(data)
+    print(f'SPARSE  Time: {(time.time()-mytime)/NUM_TRIES:.4e} s')
+
+def check_dense_sparse_correctness(p, batch_size=128, input_var=3, NUM_TRIES=100):
+    model_dense = build_model(p, sparse=False, initializer='Identity')
+    model_sparse = build_model(p, sparse=True, initializer='Identity')
+    for i in range(NUM_TRIES):
+        data = np.random.rand(batch_size, np.power(p,3), input_var)
+        res_dense = model_dense(data)
+        res_sparse = model_sparse(data)
+        assert np.allclose(res_sparse, res_dense)
+
+def check_symmetries_octahedral(p, model, batch_size=16, input_var=3):
+    """Check whether model obeys the symmetries of an octahedral group.
+
+    The octahedral group O is a finite subgroup of the SO(3) group, which
+    entails all rotations in R^3 that leave the origin fixed. O entails all
+    rotations by 90° including reflections. There are a total of 48 elements
+    in O, which can be generated by the 6 permutations of the principal axes
+    and the 2^3=8 reflections, two different reflections for each axis. 24 of
+    these elements preserve the orientation of the axes, while the other 24
+    elements invert the orientation of the axes.
+    """
+    data = [np.random.rand(batch_size, p, p, p, input_var).astype(np.float32)]
+    # Add the 5 permutations
+    data.append(data[0].transpose(0,1,3,2,4))
+    data.append(data[0].transpose(0,2,1,3,4))
+    data.append(data[0].transpose(0,2,3,1,4))
+    data.append(data[0].transpose(0,3,1,2,4))
+    data.append(data[0].transpose(0,3,2,1,4))
+    print(data[0].dtype)
+    # Reflections along axes for each of the 6 permutations
+    for i in range(6):
+        data.append(np.flip(data[i], axis=(1,    )))
+        data.append(np.flip(data[i], axis=(1,2   )))
+        data.append(np.flip(data[i], axis=(1,2,3 )))
+        data.append(np.flip(data[i], axis=(  2,  )))
+        data.append(np.flip(data[i], axis=(  2,3 )))
+        data.append(np.flip(data[i], axis=(    3,)))
+    # Flatten
+    data_reshape = []
+    for d in data:
+        data_reshape.append(d.reshape(batch_size, np.power(p,3), input_var))
+    # Assert transformed results do not change
+    res_ref = model(data_reshape[0])
+    for d in data_reshape:
+        res = model(d)
+        assert np.allclose(res, res_ref, rtol=1.e-5, atol=1.e-8,)
+
+
+if __name__ == '__main__':
+    # Test the custom layers
+    from custom_layers import GraphConv, GraphReadout
+
+    LATENT_DIM = 128
+    NUM_TRIES = 10
+    p = 15
+
+    #for p in range(1,9):
+    #    compute_A_sparsity(p)
+    #    compare_dense_sparse_performance(p)
+    #for p in range(1,9):
+    #    A = _build_grid_adjacency_matrix(p)
+    #    density = ( np.count_nonzero(A) / float(A.size) )
+    #    data = np.random.rand(np.power(p,3),LATENT_DIM)
+    #    gcn_sparse = GCNLayer(LATENT_DIM, A, sparse_op=True,
+    #                          kernel_initializer='Identity')
+    #    gcn_dense  = GCNLayer(LATENT_DIM, A, sparse_op=False,
+    #                          kernel_initializer='Identity')
+    #    mytime = time.time()
+    #    for _ in range(NUM_TRIES):
+    #        res_sparse = gcn_sparse(data)
+    #    print(f'N={p-1:1d}:  Density: {density:.4f}  Sparsity: {1.-density:.4f}  Time: {(time.time()-mytime)/NUM_TRIES:.4e} s')
+    #    mytime = time.time()
+    #    for _ in range(NUM_TRIES):
+    #        res_dense = gcn_dense(data)
+    #    print(f'N={p-1:1d}:  Density: {density:.4f}  Sparsity: {1.-density:.4f}  Time: {(time.time()-mytime)/NUM_TRIES:.4e} s')
+    #    assert np.allclose(res_sparse, res_dense)
+
+    model_sparse = build_model(7, sparse=True)
+    check_symmetries_octahedral(7, model_sparse)
+
+    # Test the GCNLayer
+    #A = np.random.rand(5,5)
+    #print()
+
+    #BATCH_SIZE=128
+    #data = np.random.rand(BATCH_SIZE, p, p, p, 3)
+    #data = data.reshape(BATCH_SIZE, np.power(p,3), 3)
+
+    #model_dense = build_model(p, sparse=False)
+    #model_dense.summary()
+    #model_dense.compile()
+
+    #mytime = time.time()
+    #for _ in range(NUM_TRIES):
+    #    res_dense = model_dense(data)
+    #print(f'DENSE  Time: {(time.time()-mytime)/NUM_TRIES:.4e} s')
+    #model_sparse = build_model(p, sparse=True)
+    #model_sparse.compile()
+    #model_sparse.summary()
+
+    #mytime = time.time()
+    #for _ in range(NUM_TRIES):
+    #    res_sparse = model_sparse(data)
+    #print(f'SPARSE  Time: {(time.time()-mytime)/NUM_TRIES:.4e} s')
