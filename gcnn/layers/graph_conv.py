@@ -24,19 +24,44 @@
 # SOFTWARE.
 
 
+"""
+This file entails the `GraphConv` class, which implements a Graph-Convolutional
+layer in TensorFlow/Keras.
+"""
+
+# Disable pylint warning to allow upper-case matrix names consistent with paper
+# pylint: disable=invalid-name
+
 import inspect
+import typing as t
 
 import numpy as np
 import tensorflow as tf
 
 
 class GraphConv(tf.keras.layers.Layer):
-    '''Implements a Graph-Convolutional layer.
+    """Implements a Graph-Convolutional layer.
 
     Implements a single Graph-Convolutional layer following:
 
-        Kipf, Thomas N., and Max Welling. "Semi-supervised classification with
-        graph convolutional networks." arXiv preprint arXiv:1609.02907 (2016).
+        Kipf, Thomas N., and Max Welling. 'Semi-supervised classification with
+        graph convolutional networks', https://doi.org/10.48550/arXiv.1609.02907
+
+    The layer is implemented as a custom Keras layer and can be used in a Keras
+    model. The layer requires the adjacency matrix `A` of the graph as input and
+    computes the state update for each node based on the graph topology. The layer
+    supports sparse matrix operations for large graphs and is compatible with
+    TensorFlow 2.x.
+
+    Example:
+        # Create a GraphConv layer with 16 output variables and adjacency matrix A
+        layer = GraphConv(num_outputs=16, A=A)
+
+        # Build the layer by providing the input shape
+        layer.build(input_shape=(None, 32))
+
+        # Evaluate the layer for input x
+        y = layer(x)
 
     Args:
         num_outputs (int): Integer resulting in the number of output variables
@@ -49,14 +74,14 @@ class GraphConv(tf.keras.layers.Layer):
         kernel_initializer (str): Initializer for the trainable weight matrix.
         use_bias (bool): Indicates whether a (trainable) bias should be added
             to the output.
-    '''
+    """
     def __init__(
             self,
             num_outputs: int,
             A: np.ndarray,
-            kernel_initializer='he_uniform': str,
-            sparse_op=True: bool,
-            use_bias=False: bool
+            kernel_initializer: t.Optional[str] = 'he_uniform',
+            sparse_op: t.Optional[bool] = True,
+            use_bias: t.Optional[bool] = False
         ):
         super().__init__()
         self.num_outputs = num_outputs
@@ -100,23 +125,24 @@ class GraphConv(tf.keras.layers.Layer):
         self._kernel_initializer = kernel_initializer
 
     def build(self, input_shape):
-        '''Build layer by adding trainable weight matrix in correct size.'''
+        """Build layer by adding trainable weight matrix in correct size."""
         # W: Add trainable weight_matrix
-        self._kernel = self.add_weight(
-            "kernel",
-            shape=[int(input_shape[-1]), self.num_outputs],
+        self._kernel=self.add_weight(
+            shape=(int(input_shape[-1]), self.num_outputs),
             initializer=self.kernel_initializer,
-            trainable=True
+            trainable=True,
+            name='kernel',
         )
         if self.use_bias:
             self._b = self.add_weight(
                 shape=(self.num_outputs,),
-                initializer="zeros",
-                trainable=True
+                initializer='zeros',
+                trainable=True,
+                name='bias',
             )
 
     def call(self, x):
-        '''Evaluates layer for input `x` following Eq.(8).'''
+        """Evaluates layer for input `x` following Eq.(8)."""
         if self.sparse_op:
             # Sparse operation has to be applied manually to each element along
             # the batch dimension, since batch dim not supported by TF.
@@ -135,7 +161,7 @@ class GraphConv(tf.keras.layers.Layer):
             A: np.ndarray,
             sparse: bool
         ) -> tf.Tensor:
-        '''Computes A_hat matrix from Eq.(9) relying only on graph topology.
+        """Computes A_hat matrix from Eq.(9) relying only on graph topology.
 
         Precomputes the necessary matrices for computing the state update that
         rely only on the graph layout, i.e. the Adjacency Matrix A.
@@ -153,7 +179,7 @@ class GraphConv(tf.keras.layers.Layer):
         Returns:
             A_hat from Eq.(9) as a sparse tensor. A_hat comprises all
                 required layout-specific information of a graph.
-        '''
+        """
         # Check if the input is a NumPy array
         if not isinstance(A, np.ndarray):
             try:

@@ -156,7 +156,7 @@ def model_fn(graph_tensor_spec: tfgnn.GraphTensorSpec):
 def callback():
     # A simplistic way to map node features to an initial state.
     def node_sets_fn(node_set, *, node_set_name):
-      state_dims_by_node_set = {"author": 32, "paper": 64}  # ...and so on.
+      state_dims_by_node_set = {'author': 32, 'paper': 64}  # ...and so on.
       state_dim = state_dims_by_node_set[node_set_name]
       features = node_set.features  # Immutable view.
       if features: # Concatenate and project all inputs (assumes they are floats).
@@ -172,11 +172,11 @@ def callback():
       return {k: tf.add(v, v) for k, v in inputs.features.items()}
     graph = tfgnn.keras.layers.MapFeatures(
         context_fn=fn, node_sets_fn=fn, edge_sets_fn=fn,
-        allowed_aux_node_sets_pattern=r".*", allowed_aux_edge_sets_pattern=r".*"
+        allowed_aux_node_sets_pattern=r'.*', allowed_aux_edge_sets_pattern=r'.*'
     )(graph)
 
 
-if __name__=="__main__":
+if __name__=='__main__':
 
     N=3
     nVar=5
@@ -194,7 +194,7 @@ if __name__=="__main__":
               'gauss_points': tfgnn.NodeSet.from_fields(
                   sizes=tf.constant([n_gp]),
                   features={
-                    "data": tf.constant(data.reshape(n_gp,nVar))
+                    'data': tf.constant(data.reshape(n_gp,nVar))
                       })},
           edge_sets = {
               'edge': tfgnn.EdgeSet.from_fields(

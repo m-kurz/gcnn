@@ -146,7 +146,7 @@ def check_symmetries_octahedral(p, model, batch_size=16, input_var=3):
 
 if __name__ == '__main__':
     # Test the custom layers
-    from custom_layers import GraphConv, GraphReadout
+    from gcnn.layers import GraphConv, GraphReadout
 
     LATENT_DIM = 128
     NUM_TRIES = 10
