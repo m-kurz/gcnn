@@ -96,7 +96,7 @@ class GridGraph():
 
         # Create edges for the adjacency matrix
         for index in np.ndindex(*dims):
-            current_node = GridGraph._multi_index_to_linear_index(index)
+            current_node = GridGraph._multi_index_to_linear_index(index, dims)
 
             # Check neighbors in each dimension
             for dim in range(len(dims)):
@@ -104,7 +104,10 @@ class GridGraph():
                 if index[dim] + 1 < dims[dim]:
                     neighbor_index = list(index)
                     neighbor_index[dim] += 1
-                    neighbor_node = GridGraph._multi_index_to_linear_index(tuple(neighbor_index))
+                    neighbor_node = GridGraph._multi_index_to_linear_index(
+                            tuple(neighbor_index),
+                            dims
+                    )
                     adj_matrix[current_node][neighbor_node] = 1
                     adj_matrix[neighbor_node][current_node] = 1  # Undirected graph
 
@@ -112,7 +115,10 @@ class GridGraph():
                 if index[dim] - 1 >= 0:
                     neighbor_index = list(index)
                     neighbor_index[dim] -= 1
-                    neighbor_node = GridGraph._multi_index_to_linear_index(tuple(neighbor_index))
+                    neighbor_node = GridGraph._multi_index_to_linear_index(
+                            tuple(neighbor_index),
+                            dims
+                    )
                     adj_matrix[current_node][neighbor_node] = 1
                     adj_matrix[neighbor_node][current_node] = 1  # Undirected graph
 
@@ -211,7 +217,7 @@ class GridGraph():
         plt.show()
 
     @staticmethod
-    def _multi_index_to_linear_index(indices):
+    def _multi_index_to_linear_index(indices: np.ndarray, dims: np.ndarray):
         """Create a mapping from multi-dimensional indices to linear index.
 
         Args:
