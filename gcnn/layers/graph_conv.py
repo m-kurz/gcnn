@@ -200,7 +200,7 @@ class GraphConv(tf.keras.layers.Layer):
         D_tilde = np.diag(np.power(np.sum(A_tilde,axis=1), -0.5))
 
         # A_hat: matmul precomputed matrices as in Eq. (9)
-        A_hat = tf.convert_to_tensor(D_tilde @ A_tilde @ D_tilde,
+        A_hat = tf.constant(D_tilde @ A_tilde @ D_tilde,
                                      dtype=tf.float32)
 
         if sparse:

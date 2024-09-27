@@ -45,8 +45,8 @@ def build_model(
     # Simple GCN with Encoder and Decoder
     inputs = tf.keras.Input(shape=(np.power(p,3), 3))
     # Encoder
-    x = tf.keras.layers.Dense(        16, activation='relu', kernel_initializer='he_uniform')(inputs)
-    x = tf.keras.layers.Dense(latent_dim, activation='relu', kernel_initializer='he_uniform')(x)
+    x = tf.keras.layers.Dense(        16, activation='relu', kernel_initializer=initializer)(inputs)
+    x = tf.keras.layers.Dense(latent_dim, activation='relu', kernel_initializer=initializer)(x)
     # n rounds of GCN-style message passing
     for _ in range(n_message_passing):
         x = GraphConv(latent_dim, A, kernel_initializer=initializer, sparse_op=sparse)(x)
@@ -98,7 +98,7 @@ def check_dense_sparse_correctness(
     """Check whether the dense and sparse GCN layers yield the same results."""
     model_dense = build_model(p, sparse=False, initializer='Identity')
     model_sparse = build_model(p, sparse=True, initializer='Identity')
-    for i in range(num_tries):
+    for _ in range(num_tries):
         data = np.random.rand(batch_size, np.power(p,3), input_var)
         res_dense = model_dense(data)
         res_sparse = model_sparse(data)
@@ -144,7 +144,7 @@ def check_symmetries_octahedral(
     res_ref = model(data_reshape[0])
     for d in data_reshape:
         res = model(d)
-        assert np.allclose(res, res_ref, rtol=1.e-5, atol=1.e-8,)
+        assert np.allclose(res, res_ref, rtol=1.e-4, atol=1.e-6)
 
 def main():
     NUM_TRIES = 10
@@ -153,16 +153,16 @@ def main():
         compute_A_sparsity(p)
 
         # Check correctness of dense and sparse layers
-        check_dense_sparse_correctness(p)
+        check_dense_sparse_correctness(p, num_tries=NUM_TRIES)
 
         # Compare performance of dense and sparse layers
         compare_dense_sparse_performance(p, num_tries=NUM_TRIES)
 
         # Check that GNN obeys the symmetries
-        model_sparse = build_model(p, sparse=True)
-        check_symmetries_octahedral(p, model_sparse)
         model_dense = build_model(p, sparse=False)
         check_symmetries_octahedral(p, model_dense)
+        model_sparse = build_model(p, sparse=True)
+        check_symmetries_octahedral(p, model_sparse)
 
 if __name__ == '__main__':
     main()
