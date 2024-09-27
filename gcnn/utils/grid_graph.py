@@ -24,8 +24,6 @@
 # SOFTWARE.
 
 
-import typing as t
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -44,7 +42,7 @@ class GridGraph():
             grid based on the input dimensions.
         get_num_edges: Get the total number of edges in the grid graph.
         get_edge_list: Get the list of (directed) edges of the grid graph.
-        visualize: Visualize the grid graph.
+        visualize_graph: Visualize the grid graph.
 
     Attributes:
         dims: List of integers representing the number of nodes in each dimension.
@@ -58,7 +56,8 @@ class GridGraph():
         """Initialize the grid graph.
 
         Args:
-            dims: List of integers representing the number of nodes in each dimension.
+            dims (np.ndarray): List or tuple of integers representing the
+                number of nodes in each dimension.
         """
         self.dims = dims
 
@@ -72,8 +71,8 @@ class GridGraph():
         """Get the total number of nodes in the grid graph.
 
         Args:
-            dims: List or tuple of integers representing the number of nodes in
-                each dimension.
+            dims (np.ndarray): List or tuple of integers representing the
+                number of nodes in each dimension.
 
         Returns:
             (int): Total number of nodes in the grid graph.
@@ -85,8 +84,8 @@ class GridGraph():
         """Create an adjacency matrix for a multi-dimensional grid based on the input dimensions.
 
         Args:
-            dims: List or tuple of integers representing the number of nodes in
-                each dimension.
+            dims (np.ndarray): List or tuple of integers representing the
+                number of nodes in each dimension.
 
         Returns:
             (np.ndarray): Adjacency matrix of grid with dim. (n_nodes, n_nodes)
@@ -129,8 +128,8 @@ class GridGraph():
         """Get the total number of edges in the grid graph.
 
         Args:
-            dims: List or tuple of integers representing the number of nodes in
-                each dimension.
+            dims (np.ndarray): List or tuple of integers representing the
+                number of nodes in each dimension.
 
         Returns:
             (int): Total number of edges in the grid graph.
@@ -154,16 +153,18 @@ class GridGraph():
     def get_edge_list(dims: np.ndarray) -> np.ndarray:
         """Get the list of (directed) edges of the grid graph.
 
+        Args:
+            dims (np.ndarray): List or tuple of integers representing the
+                number of nodes in each dimension.
+
         Returns:
             A tuple of two numpy arrays representing the source and target nodes of the edges.
         """
         num_edges = GridGraph.get_num_edges(dims)
-        print(num_edges)
         edge_list = np.zeros((num_edges, 2), dtype=int)
 
         A = GridGraph.get_adjacency_matrix(dims)
         num_nodes = GridGraph.get_num_nodes(dims)
-        print(num_nodes)
 
         k = 0
         for i in range(num_nodes):
@@ -176,7 +177,12 @@ class GridGraph():
 
     @staticmethod
     def visualize_graph(dims: np.ndarray):
-        """Visualize the grid graph."""
+        """Visualize the grid graph.
+
+        Args:
+            dims (np.ndarray): List or tuple of integers representing the
+                number of nodes in each dimension.
+        """
         edge_list = GridGraph.get_edge_list(dims)
         adj_matrix = GridGraph.get_adjacency_matrix(dims)
 
@@ -203,7 +209,7 @@ class GridGraph():
 
         # Add grid, title, and labels
         ax.grid(True)
-        plt.title('Element Graph')
+        plt.title('Grid Graph')
         ax.set_xlabel('Xi')
         ax.set_ylabel('Eta')
         ax.set_zlabel('Zeta')
@@ -250,14 +256,3 @@ class GridGraph():
             multi_index[i] = index % dims[i]
             index //= dims[i]
         return multi_index
-
-
-if __name__=='__main__':
-
-    dims = [3, 3, 2]  # 3x3x2 grid
-
-    adjacency_matrix = GridGraph.get_adjacency_matrix(dims)
-
-    edge_list = GridGraph.get_edge_list(dims)
-
-    GridGraph.visualize_graph(dims)
