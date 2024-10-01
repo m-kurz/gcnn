@@ -59,7 +59,7 @@ class GraphReadout(tf.keras.layers.Layer):
     def reduction_op(self, reduction_op: str):
         """Setter for the reduction operation."""
         if not reduction_op in {'mean', 'max', 'min'}:
-            raise NotImplementedError('Invalid reduction type. Only `mean`, `max` and `min` supported!')
+            raise ValueError('Invalid reduction type. Only `mean`, `max` and `min` supported!')
         self._reduction_op = reduction_op
 
     def call(self, x: tf.Tensor):
@@ -81,4 +81,4 @@ class GraphReadout(tf.keras.layers.Layer):
             return tf.math.reduce_max(x, axis=self._reduction_dim)
         if self.reduction_op == 'min':
             return tf.math.reduce_min(x, axis=self._reduction_dim)
-        raise NotImplementedError('Invalid reduction type. Currently, only `mean`, `max` and `min` are supported!')
+        raise ValueError('Invalid reduction type. Currently, only `mean`, `max` and `min` are supported!')

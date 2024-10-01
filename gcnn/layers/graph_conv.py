@@ -84,10 +84,10 @@ class GraphConv(tf.keras.layers.Layer):
             use_bias: t.Optional[bool] = False
         ):
         super().__init__()
-        self.num_outputs = num_outputs
         self.sparse_op = sparse_op
         self.kernel_initializer = kernel_initializer
-        self.use_bias = use_bias
+        self._use_bias = use_bias
+        self._num_outputs = num_outputs
 
         # A_hat: Precompute geometry information
         self._A_hat = self._compute_A_hat(A, self.sparse_op)
@@ -105,7 +105,7 @@ class GraphConv(tf.keras.layers.Layer):
     def sparse_op(self, sparse_op: bool):
         """Setter for the sparse operation."""
         if not isinstance(sparse_op, bool):
-            raise AttributeError('Expected a boolean value for `sparse_op`!')
+            raise ValueError('Expected a boolean value for `sparse_op`!')
         self._sparse_op = sparse_op
 
     @property
@@ -121,21 +121,21 @@ class GraphConv(tf.keras.layers.Layer):
             if inspect.isclass(obj) and issubclass(obj, tf.keras.initializers.Initializer):
                 initializer_list.append(name)
         if kernel_initializer not in initializer_list:
-            raise AttributeError(f'Invalid initializer {kernel_initializer}. Available are: {initializer_list}')
+            raise ValueError(f'Invalid initializer {kernel_initializer}. Available are: {initializer_list}')
         self._kernel_initializer = kernel_initializer
 
     def build(self, input_shape):
         """Build layer by adding trainable weight matrix in correct size."""
         # W: Add trainable weight_matrix
         self._kernel=self.add_weight(
-            shape=(int(input_shape[-1]), self.num_outputs),
+            shape=(int(input_shape[-1]), self._num_outputs),
             initializer=self.kernel_initializer,
             trainable=True,
             name='kernel',
         )
-        if self.use_bias:
+        if self._use_bias:
             self._b = self.add_weight(
-                shape=(self.num_outputs,),
+                shape=(self._num_outputs,),
                 initializer='zeros',
                 trainable=True,
                 name='bias',
@@ -148,11 +148,11 @@ class GraphConv(tf.keras.layers.Layer):
             # the batch dimension, since batch dim not supported by TF.
             def sparse_matmul_A_hat(x):
                 return  tf.sparse.sparse_dense_matmul(self._A_hat, x)
-            if self.use_bias:
+            if self._use_bias:
                 return tf.vectorized_map(sparse_matmul_A_hat, x, warn=False) @ self._kernel + self._b
-            return tf.vectorized_map(sparse_matmul_A_hat, x, warn=False) @ self._kernel
+            return tf.vectorized_map(sparse_matmul_A_hat, x) @ self._kernel
         # Otherwise, just return regular matmul
-        if self.use_bias:
+        if self._use_bias:
             return self._A_hat @ x @ self._kernel + self._b
         return self._A_hat @ x @ self._kernel
 
@@ -185,13 +185,13 @@ class GraphConv(tf.keras.layers.Layer):
             try:
                 A = np.array(A)
             except Exception as e:
-                raise AttributeError('Expected a numpy array!') from e
+                raise ValueError('Expected a numpy array!') from e
         # Check if the array has two dimensions
         if A.ndim != 2:
-            raise AttributeError('Input array has more than two dimensions!')
+            raise ValueError('Input array has more than two dimensions!')
         # Check if the matrix is square (number of rows equals number of columns)
         if A.shape[0] != A.shape[1]:
-            raise AttributeError('Input array is not square!')
+            raise ValueError('Input array is not square!')
 
         # A_tilde: adding self-loops
         A_tilde = A + np.eye(A.shape[0], dtype=A.dtype)
