@@ -203,7 +203,6 @@ class GridGraph():
             dims = np.append(dims, (1,))
 
         edge_list = GridGraph.get_edge_list(dims)
-        adj_matrix = GridGraph.get_adjacency_matrix(dims)
 
         coordinates = []
         for index in np.ndindex(*dims):
