@@ -27,7 +27,7 @@
 import tensorflow as tf
 
 
-class GraphReadout(tf.keras.layers.Layer):
+class GraphReadout(tf.keras.layers.Layer):  # pylint: disable=no-member
     '''Implements a graph readout layer using TensorFlow.
 
     Implements a graph readout layer, also called (flat) graph pooling layer,

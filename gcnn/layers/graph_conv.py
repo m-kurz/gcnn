@@ -39,7 +39,7 @@ import numpy as np
 import tensorflow as tf
 
 
-class GraphConv(tf.keras.layers.Layer):
+class GraphConv(tf.keras.layers.Layer):  # pylint: disable=no-member
     """Implements a Graph-Convolutional layer.
 
     Implements a single Graph-Convolutional layer following:
@@ -117,8 +117,8 @@ class GraphConv(tf.keras.layers.Layer):
     def kernel_initializer(self, kernel_initializer: str):
         """Set requested initializer if it is implemented in TensorFlow."""
         initializer_list = []
-        for name, obj in inspect.getmembers(tf.keras.initializers):
-            if inspect.isclass(obj) and issubclass(obj, tf.keras.initializers.Initializer):
+        for name, obj in inspect.getmembers(tf.keras.initializers):  # pylint: disable=no-member
+            if inspect.isclass(obj) and issubclass(obj, tf.keras.initializers.Initializer):  # pylint: disable=no-member
                 initializer_list.append(name)
         if kernel_initializer not in initializer_list:
             raise ValueError(f'Invalid initializer {kernel_initializer}. Available are: {initializer_list}')
