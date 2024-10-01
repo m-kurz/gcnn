@@ -63,8 +63,8 @@ class GridGraph():
 
         self.adj_matrix = self.get_adjacency_matrix(self.dims)
         self.edge_list = self.get_edge_list(self.dims)
-        self.num_nodes = self.get_num_nodes(self.dims)
-        self.num_edges = self.get_num_edges(self.dims)
+        self.n_nodes = self.get_num_nodes(self.dims)
+        self.n_edges = self.get_num_edges(self.dims)
 
     @staticmethod
     def get_num_nodes(dims: np.ndarray) -> int:
@@ -182,7 +182,26 @@ class GridGraph():
         Args:
             dims (np.ndarray): List or tuple of integers representing the
                 number of nodes in each dimension.
+
+        Raises:
+            ValueError: If the visualization is not supported for the given
+                number of dimensions.
         """
+        if not isinstance(dims, np.ndarray):
+            dims = np.array(dims, dtype=np.int32)
+
+        if dims.ndim != 1:
+            dims = dims.flatten()
+
+        if dims.size not in [1, 2, 3]:
+            raise ValueError(
+                "Visualization only supported for 1D, 2D, or 3D grids.")
+
+        if dims.size == 1:
+            dims = np.append(dims, (1, 1))
+        elif dims.size == 2:
+            dims = np.append(dims, (1,))
+
         edge_list = GridGraph.get_edge_list(dims)
         adj_matrix = GridGraph.get_adjacency_matrix(dims)
 
