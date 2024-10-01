@@ -23,8 +23,7 @@ classifiers = [
 [tool.poetry.dependencies]
 tensorflow = ">=2.15"
 numpy = "*"
-pytest = "*"
 matplotlib = "*"
-
-#[tool.poetry.scripts]
-#gcnn = "gcnn.scripts.cli:main"
+pytest = "*"
+pytest-cov = "*"
+pylint = "*"
