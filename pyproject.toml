@@ -1,18 +1,25 @@
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.2.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "gcnn"
 version = "0.1.0"
 authors = [
-	"Marius Kurz <marius.kurz@cwi.nl>",
+    "Marius Kurz <marius.kurz@cwi.nl>",
 ]
 description = "An implementation of Graph Convolutional Neural Networks (GCNN) using TensorFlow."
 license = "MIT"
 readme = "README.md"
 repository = "https://github.com/m-kurz/gcnn/"
-keywords = ["Graph Convolutional Neural Networks", "TensorFlow", "Graph Neural Networks"]
+keywords = [
+    "Graph Convolutional Neural Networks",
+    "TensorFlow",
+    "Graph Neural Networks",
+    "Geometric Deep Learning",
+    "Machine Learning",
+    "Deep Learning"
+]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "License :: OSI Approved :: MIT License",
@@ -24,6 +31,15 @@ classifiers = [
 tensorflow = ">=2.15"
 numpy = "*"
 matplotlib = "*"
-pytest = "*"
-pytest-cov = "*"
-pylint = "*"
+
+# Add development dependencies as `dev` extra
+pytest = { version = "*", optional = true}
+pytest-cov = { version = "*", optional = true}
+pylint = { version = "*", optional = true}
+
+[tool.poetry.extras]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pylint"
+]
