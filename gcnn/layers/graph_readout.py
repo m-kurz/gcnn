@@ -45,8 +45,8 @@ class GraphReadout(tf.keras.layers.Layer):  # pylint: disable=no-member
             nodes are listed.
     '''
 
-    def __init__(self, reduction_op='mean', reduction_dim=-2):
-        super().__init__()
+    def __init__(self, reduction_op='mean', reduction_dim=-2, **kwargs):
+        super().__init__(**kwargs)
         self.reduction_op = reduction_op
         self._reduction_dim = reduction_dim
 
@@ -62,7 +62,7 @@ class GraphReadout(tf.keras.layers.Layer):  # pylint: disable=no-member
             raise ValueError('Invalid reduction type. Only `mean`, `max` and `min` supported!')
         self._reduction_op = reduction_op
 
-    def call(self, x: tf.Tensor):
+    def call(self, x: tf.Tensor, keepdims=False):
         '''Performes reduction operation.
 
         Args:
@@ -76,9 +76,9 @@ class GraphReadout(tf.keras.layers.Layer):  # pylint: disable=no-member
             NotImplementedError: If the reduction operation is not supported.
         '''
         if self.reduction_op == 'mean':
-            return tf.math.reduce_mean(x, axis=self._reduction_dim)
+            return tf.math.reduce_mean(x, axis=self._reduction_dim, keepdims=keepdims)
         if self.reduction_op == 'max':
-            return tf.math.reduce_max(x, axis=self._reduction_dim)
+            return tf.math.reduce_max(x, axis=self._reduction_dim, keepdims=keepdims)
         if self.reduction_op == 'min':
-            return tf.math.reduce_min(x, axis=self._reduction_dim)
+            return tf.math.reduce_min(x, axis=self._reduction_dim, keepdims=keepdims)
         raise ValueError('Invalid reduction type. Currently, only `mean`, `max` and `min` are supported!')

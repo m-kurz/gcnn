@@ -81,16 +81,22 @@ class GraphConv(tf.keras.layers.Layer):  # pylint: disable=no-member
             A: np.ndarray,
             kernel_initializer: t.Optional[str] = 'he_uniform',
             sparse_op: t.Optional[bool] = True,
-            use_bias: t.Optional[bool] = False
+            use_bias: t.Optional[bool] = False,
+            spectral: t.Optional[bool] = True,
+            ignore_square_mat_warning: t.Optional[bool] = False,
+            **kwargs
         ):
-        super().__init__()
+        super().__init__(**kwargs)
         self.sparse_op = sparse_op
         self.kernel_initializer = kernel_initializer
         self._use_bias = use_bias
         self._num_outputs = num_outputs
+        # Whether to build a spectral or spatial filter
+        self._spectral = spectral
+        self._ignore_square_mat_warning = ignore_square_mat_warning
 
         # A_hat: Precompute geometry information
-        self._A_hat = self._compute_A_hat(A, self.sparse_op)
+        self._A_hat = self._compute_A_hat(A, self.sparse_op, spectral=self._spectral, ignore_square_mat_warning=self._ignore_square_mat_warning)
 
         # Set trainable variables to None until built
         self._kernel = None
@@ -159,7 +165,9 @@ class GraphConv(tf.keras.layers.Layer):  # pylint: disable=no-member
     @staticmethod
     def _compute_A_hat(
             A: np.ndarray,
-            sparse: bool
+            sparse: bool,
+            spectral: t.Optional[bool] = True,
+            ignore_square_mat_warning: t.Optional[bool] = False,
         ) -> tf.Tensor:
         """Computes A_hat matrix from Eq.(9) relying only on graph topology.
 
@@ -190,18 +198,23 @@ class GraphConv(tf.keras.layers.Layer):  # pylint: disable=no-member
         if A.ndim != 2:
             raise ValueError('Input array has more than two dimensions!')
         # Check if the matrix is square (number of rows equals number of columns)
-        if A.shape[0] != A.shape[1]:
+        if A.shape[0] != A.shape[1] and not ignore_square_mat_warning:
             raise ValueError('Input array is not square!')
 
         # A_tilde: adding self-loops
-        A_tilde = A + np.eye(A.shape[0], dtype=A.dtype)
+        if A.shape[0] == A.shape[1]:
+            A_tilde = A + np.eye(A.shape[0], dtype=A.dtype)
 
-        # D_tilde: get degree matrix already raise to exponent `-0.5`
-        D_tilde = np.diag(np.power(np.sum(A_tilde,axis=1), -0.5))
-
-        # A_hat: matmul precomputed matrices as in Eq. (9)
-        A_hat = tf.constant(D_tilde @ A_tilde @ D_tilde,
-                                     dtype=tf.float32)
+        if spectral == True:
+            # D_tilde: get degree matrix already raise to exponent `-0.5`
+            D_tilde = np.diag(np.power(np.sum(A_tilde,axis=1), -0.5))
+            # A_hat: matmul precomputed matrices as in Eq. (9)
+            A_hat = tf.constant(D_tilde @ A_tilde @ D_tilde,
+                                        dtype=tf.float32)
+        else:
+            D_tilde = np.diag(np.power(np.sum(A_tilde,axis=1), -1))
+            A_hat = tf.constant(D_tilde @ A_tilde,
+                                        dtype=tf.float32)
 
         if sparse:
             return tf.sparse.from_dense(A_hat)
